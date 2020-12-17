@@ -5,11 +5,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/gin-swagger"
-	"github.com/swaggo/gin-swagger/swaggerFiles"
 	"github.com/swaggo/swag/example/celler/controller"
 	_ "github.com/swaggo/swag/example/celler/docs"
 	"github.com/swaggo/swag/example/celler/httputil"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // @title Swagger Example API

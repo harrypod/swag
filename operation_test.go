@@ -11,7 +11,7 @@ import (
 
 func TestParseEmptyComment(t *testing.T) {
 	operation := NewOperation()
-	err := operation.ParseComment("//")
+	err := operation.ParseComment("//", nil)
 
 	assert.NoError(t, err)
 }
@@ -26,7 +26,7 @@ func TestParseTagsComment(t *testing.T) {
 }`
 	comment := `/@Tags pet, store,user`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
 	assert.Equal(t, expected, string(b))
@@ -46,12 +46,14 @@ func TestParseAcceptComment(t *testing.T) {
 		"application/octet-stream",
 		"image/png",
 		"image/jpeg",
-		"image/gif"
+		"image/gif",
+		"application/xhtml+xml",
+		"application/health+json"
     ]
 }`
-	comment := `/@Accept json,xml,plain,html,mpfd,x-www-form-urlencoded,json-api,json-stream,octet-stream,png,jpeg,gif`
+	comment := `/@Accept json,xml,plain,html,mpfd,x-www-form-urlencoded,json-api,json-stream,octet-stream,png,jpeg,gif,application/xhtml+xml,application/health+json`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
 	assert.JSONEq(t, expected, string(b))
@@ -61,7 +63,7 @@ func TestParseAcceptComment(t *testing.T) {
 func TestParseAcceptCommentErr(t *testing.T) {
 	comment := `/@Accept unknown`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.Error(t, err)
 }
 
@@ -79,12 +81,14 @@ func TestParseProduceComment(t *testing.T) {
 		"application/octet-stream",
 		"image/png",
 		"image/jpeg",
-		"image/gif"
+		"image/gif",
+		"application/health+json"
     ]
 }`
-	comment := `/@Produce json,xml,plain,html,mpfd,x-www-form-urlencoded,json-api,json-stream,octet-stream,png,jpeg,gif`
+	comment := `/@Produce json,xml,plain,html,mpfd,x-www-form-urlencoded,json-api,json-stream,octet-stream,png,jpeg,gif,application/health+json`
 	operation := new(Operation)
-	operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err, "ParseComment should not fail")
 	b, _ := json.MarshalIndent(operation, "", "    ")
 	assert.JSONEq(t, expected, string(b))
 }
@@ -92,23 +96,32 @@ func TestParseProduceComment(t *testing.T) {
 func TestParseProduceCommentErr(t *testing.T) {
 	comment := `/@Produce foo`
 	operation := new(Operation)
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.Error(t, err)
 }
 
 func TestParseRouterComment(t *testing.T) {
 	comment := `/@Router /customer/get-wishlist/{wishlist_id} [get]`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "/customer/get-wishlist/{wishlist_id}", operation.Path)
 	assert.Equal(t, "GET", operation.HTTPMethod)
 }
 
+func TestParseRouterCommentWithPlusSign(t *testing.T) {
+	comment := `/@Router /customer/get-wishlist/{proxy+} [post]`
+	operation := NewOperation()
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "/customer/get-wishlist/{proxy+}", operation.Path)
+	assert.Equal(t, "POST", operation.HTTPMethod)
+}
+
 func TestParseRouterCommentOccursErr(t *testing.T) {
 	comment := `/@Router /customer/get-wishlist/{wishlist_id}`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.Error(t, err)
 }
 
@@ -120,7 +133,7 @@ func TestParseResponseCommentWithObjectType(t *testing.T) {
 	operation.parser.TypeDefinitions["model"] = make(map[string]*ast.TypeSpec)
 	operation.parser.TypeDefinitions["model"]["OrderRow"] = &ast.TypeSpec{}
 
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 
 	response := operation.Responses.StatusCodeResponses[200]
@@ -155,14 +168,14 @@ func TestParseResponseCommentWithObjectTypeErr(t *testing.T) {
 	operation.parser.TypeDefinitions["model"] = make(map[string]*ast.TypeSpec)
 	operation.parser.TypeDefinitions["model"]["notexist"] = &ast.TypeSpec{}
 
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.Error(t, err)
 }
 
 func TestParseResponseCommentWithArrayType(t *testing.T) {
 	comment := `@Success 200 {array} model.OrderRow "Error message, if code != 200`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 	response := operation.Responses.StatusCodeResponses[200]
 	assert.Equal(t, `Error message, if code != 200`, response.Description)
@@ -190,7 +203,8 @@ func TestParseResponseCommentWithArrayType(t *testing.T) {
 func TestParseResponseCommentWithBasicType(t *testing.T) {
 	comment := `@Success 200 {string} string "it's ok'"`
 	operation := NewOperation()
-	operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err, "ParseComment should not fail")
 	b, _ := json.MarshalIndent(operation, "", "    ")
 
 	expected := `{
@@ -209,7 +223,9 @@ func TestParseResponseCommentWithBasicType(t *testing.T) {
 func TestParseEmptyResponseComment(t *testing.T) {
 	comment := `@Success 200 "it's ok"`
 	operation := NewOperation()
-	operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err, "ParseComment should not fail")
+
 	b, _ := json.MarshalIndent(operation, "", "    ")
 
 	expected := `{
@@ -222,20 +238,64 @@ func TestParseEmptyResponseComment(t *testing.T) {
 	assert.Equal(t, expected, string(b))
 }
 
+func TestParseResponseCommentWithHeader(t *testing.T) {
+	comment := `@Success 200 "it's ok"`
+	operation := NewOperation()
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err, "ParseComment should not fail")
+
+	comment = `@Header 200 {string} Token "qwerty"`
+	err = operation.ParseComment(comment, nil)
+	assert.NoError(t, err, "ParseComment should not fail")
+
+	b, err := json.MarshalIndent(operation, "", "    ")
+	assert.NoError(t, err)
+
+	expected := `{
+    "responses": {
+        "200": {
+            "description": "it's ok",
+            "headers": {
+                "Token": {
+                    "type": "string",
+                    "description": "qwerty"
+                }
+            }
+        }
+    }
+}`
+	assert.Equal(t, expected, string(b))
+}
+
+func TestParseEmptyResponseOnlyCode(t *testing.T) {
+	comment := `@Success 200`
+	operation := NewOperation()
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err, "ParseComment should not fail")
+
+	b, _ := json.MarshalIndent(operation, "", "    ")
+
+	expected := `{
+    "responses": {
+        "200": {}
+    }
+}`
+	assert.Equal(t, expected, string(b))
+}
+
 func TestParseResponseCommentParamMissing(t *testing.T) {
 	operation := NewOperation()
 
 	paramLenErrComment := `@Success notIntCode {string}`
-	paramLenErr := operation.ParseComment(paramLenErrComment)
-	assert.EqualError(t, paramLenErr, `can not parse response comment "notIntCode {string}"
-can not parse empty response comment "notIntCode {string}"`)
+	paramLenErr := operation.ParseComment(paramLenErrComment, nil)
+	assert.EqualError(t, paramLenErr, `can not parse response comment "notIntCode {string}"`)
 }
 
 // Test ParseParamComment
 func TestParseParamCommentByPathType(t *testing.T) {
 	comment := `@Param some_id path int true "Some ID"`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -253,10 +313,31 @@ func TestParseParamCommentByPathType(t *testing.T) {
 	assert.Equal(t, expected, string(b))
 }
 
+func TestParseParamCommentByID(t *testing.T) {
+	comment := `@Param unsafe_id[lte] query int true "Unsafe query param"`
+	operation := NewOperation()
+	err := operation.ParseComment(comment, nil)
+
+	assert.NoError(t, err)
+	b, _ := json.MarshalIndent(operation, "", "    ")
+	expected := `{
+    "parameters": [
+        {
+            "type": "integer",
+            "description": "Unsafe query param",
+            "name": "unsafe_id[lte]",
+            "in": "query",
+            "required": true
+        }
+    ]
+}`
+	assert.Equal(t, expected, string(b))
+}
+
 func TestParseParamCommentByQueryType(t *testing.T) {
 	comment := `@Param some_id query int true "Some ID"`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -281,7 +362,7 @@ func TestParseParamCommentByBodyType(t *testing.T) {
 
 	operation.parser.TypeDefinitions["model"] = make(map[string]*ast.TypeSpec)
 	operation.parser.TypeDefinitions["model"]["OrderRow"] = &ast.TypeSpec{}
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -309,17 +390,17 @@ func TestParseParamCommentByBodyTypeErr(t *testing.T) {
 
 	operation.parser.TypeDefinitions["model"] = make(map[string]*ast.TypeSpec)
 	operation.parser.TypeDefinitions["model"]["notexist"] = &ast.TypeSpec{}
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.Error(t, err)
 }
 
 func TestParseParamCommentByFormDataType(t *testing.T) {
-	comment := `@Param   file formData file true  "this is a test file"`
+	comment := `@Param file formData file true "this is a test file"`
 	operation := NewOperation()
 	operation.parser = New()
 
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -337,10 +418,41 @@ func TestParseParamCommentByFormDataType(t *testing.T) {
 	assert.Equal(t, expected, string(b))
 }
 
+func TestParseParamCommentByFormDataTypeUint64(t *testing.T) {
+	comment := `@Param file formData uint64 true "this is a test file"`
+	operation := NewOperation()
+	operation.parser = New()
+
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	b, _ := json.MarshalIndent(operation, "", "    ")
+	expected := `{
+    "parameters": [
+        {
+            "type": "integer",
+            "description": "this is a test file",
+            "name": "file",
+            "in": "formData",
+            "required": true
+        }
+    ]
+}`
+	assert.Equal(t, expected, string(b))
+}
+
+func TestParseParamCommentByNotSupportedType(t *testing.T) {
+	comment := `@Param some_id not_supported int true "Some ID"`
+	operation := NewOperation()
+	err := operation.ParseComment(comment, nil)
+
+	assert.Error(t, err)
+}
+
 func TestParseParamCommentNotMatch(t *testing.T) {
 	comment := `@Param some_id body mock true`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.Error(t, err)
 }
@@ -348,7 +460,7 @@ func TestParseParamCommentNotMatch(t *testing.T) {
 func TestParseParamCommentByEnums(t *testing.T) {
 	comment := `@Param some_id query string true "Some ID" Enums(A, B, C)`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -372,7 +484,7 @@ func TestParseParamCommentByEnums(t *testing.T) {
 
 	comment = `@Param some_id query int true "Some ID" Enums(1, 2, 3)`
 	operation = NewOperation()
-	err = operation.ParseComment(comment)
+	err = operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ = json.MarshalIndent(operation, "", "    ")
@@ -396,7 +508,7 @@ func TestParseParamCommentByEnums(t *testing.T) {
 
 	comment = `@Param some_id query number true "Some ID" Enums(1.1, 2.2, 3.3)`
 	operation = NewOperation()
-	err = operation.ParseComment(comment)
+	err = operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ = json.MarshalIndent(operation, "", "    ")
@@ -420,7 +532,7 @@ func TestParseParamCommentByEnums(t *testing.T) {
 
 	comment = `@Param some_id query bool true "Some ID" Enums(true, false)`
 	operation = NewOperation()
-	err = operation.ParseComment(comment)
+	err = operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ = json.MarshalIndent(operation, "", "    ")
@@ -445,7 +557,7 @@ func TestParseParamCommentByEnums(t *testing.T) {
 func TestParseParamCommentByMaxLength(t *testing.T) {
 	comment := `@Param some_id query string true "Some ID" MaxLength(10)`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -467,7 +579,7 @@ func TestParseParamCommentByMaxLength(t *testing.T) {
 func TestParseParamCommentByMinLength(t *testing.T) {
 	comment := `@Param some_id query string true "Some ID" MinLength(10)`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -489,7 +601,7 @@ func TestParseParamCommentByMinLength(t *testing.T) {
 func TestParseParamCommentByMininum(t *testing.T) {
 	comment := `@Param some_id query int true "Some ID" Mininum(10)`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -511,7 +623,7 @@ func TestParseParamCommentByMininum(t *testing.T) {
 func TestParseParamCommentByMaxinum(t *testing.T) {
 	comment := `@Param some_id query int true "Some ID" Maxinum(10)`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -533,7 +645,7 @@ func TestParseParamCommentByMaxinum(t *testing.T) {
 func TestParseParamCommentByDefault(t *testing.T) {
 	comment := `@Param some_id query int true "Some ID" Default(10)`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -555,17 +667,35 @@ func TestParseParamCommentByDefault(t *testing.T) {
 func TestParseIdComment(t *testing.T) {
 	comment := `@Id myOperationId`
 	operation := NewOperation()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "myOperationId", operation.ID)
+}
+
+func TestFindTypeDefCoreLib(t *testing.T) {
+	spec, err := findTypeDef("net/http", "Request")
+	assert.NoError(t, err)
+	assert.NotNil(t, spec)
+}
+
+func TestFindTypeDefExternalPkg(t *testing.T) {
+	spec, err := findTypeDef("github.com/stretchr/testify/assert", "Assertions")
+	assert.NoError(t, err)
+	assert.NotNil(t, spec)
+}
+
+func TestFindTypeDefInvalidPkg(t *testing.T) {
+	spec, err := findTypeDef("does-not-exist", "foo")
+	assert.Error(t, err)
+	assert.Nil(t, spec)
 }
 
 func TestParseSecurityComment(t *testing.T) {
 	comment := `@Security OAuth2Implicit[read, write]`
 	operation := NewOperation()
 	operation.parser = New()
-	err := operation.ParseComment(comment)
+	err := operation.ParseComment(comment, nil)
 	assert.NoError(t, err)
 
 	b, _ := json.MarshalIndent(operation, "", "    ")
@@ -580,4 +710,39 @@ func TestParseSecurityComment(t *testing.T) {
     ]
 }`
 	assert.Equal(t, expected, string(b))
+}
+
+func TestParseMultiDescription(t *testing.T) {
+	comment := `@Description line one`
+	operation := NewOperation()
+	operation.parser = New()
+
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	comment = `@Tags multi`
+	err = operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	comment = `@Description line two x`
+	err = operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	b, _ := json.MarshalIndent(operation, "", "    ")
+
+	expected := `"description": "line one\nline two x"`
+	assert.Contains(t, string(b), expected)
+}
+
+func TestParseDeprecationDescription(t *testing.T) {
+	comment := `@Deprecated`
+	operation := NewOperation()
+	operation.parser = New()
+
+	err := operation.ParseComment(comment, nil)
+	assert.NoError(t, err)
+
+	if !operation.Deprecated {
+		t.Error("Failed to parse @deprecated comment")
+	}
 }

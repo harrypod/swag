@@ -2,8 +2,10 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/swaggo/swag/example/basic/web"
 )
 
+// GetStringByInt example
 // @Summary Add a new pet to the store
 // @Description get string by ID
 // @ID get-string-by-int
@@ -16,9 +18,16 @@ import (
 // @Failure 404 {object} web.APIError "Can not find ID"
 // @Router /testapi/get-string-by-int/{some_id} [get]
 func GetStringByInt(c *gin.Context) {
-	//write your code
+	var pet web.Pet
+	if err := c.ShouldBindJSON(&pet); err != nil {
+		// write your code
+		return
+	}
+
+	// write your code
 }
 
+// GetStructArrayByString example
 // @Description get struct array by ID
 // @ID get-struct-array-by-string
 // @Accept  json
@@ -31,9 +40,10 @@ func GetStringByInt(c *gin.Context) {
 // @Failure 404 {object} web.APIError "Can not find ID"
 // @Router /testapi/get-struct-array-by-string/{some_id} [get]
 func GetStructArrayByString(c *gin.Context) {
-	//write your code
+	// write your code
 }
 
+// Upload example
 // @Summary Upload file
 // @Description Upload file
 // @ID file.upload
@@ -45,15 +55,17 @@ func GetStructArrayByString(c *gin.Context) {
 // @Failure 404 {object} web.APIError "Can not find ID"
 // @Router /file/upload [post]
 func Upload(ctx *gin.Context) {
-	//write your code
+	// write your code
 }
 
+// AnonymousField example
 // @Summary use Anonymous field
 // @Success 200 {object} web.RevValue "ok"
 func AnonymousField() {
 
 }
 
+// Pet3 example
 type Pet3 struct {
 	ID int `json:"id"`
 }

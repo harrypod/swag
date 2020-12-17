@@ -50,6 +50,7 @@ func GetStructArrayByString(c *gin.Context) {
 // @Param   file formData file true  "this is a test file"
 // @Success 200 {string} string "ok"
 // @Failure 400 {object} web.APIError "We need ID!!"
+// @Failure 401 {array} string
 // @Failure 404 {object} web.APIError "Can not find ID"
 // @Router /file/upload [post]
 func Upload(ctx *gin.Context) {
@@ -68,6 +69,48 @@ func Pet2() {
 
 }
 
+// @Summary Use IndirectRecursiveTest
+// @Success 200 {object} web.IndirectRecursiveTest
+func IndirectRecursiveTest() {
+}
+
+// @Summary Use Tags
+// @Success 200 {object} web.Tags
+func Tags() {
+}
+
+// @Summary Use CrossAlias
+// @Success 200 {object} web.CrossAlias
+func CrossAlias() {
+}
+
+// @Summary Use AnonymousStructArray
+// @Success 200 {object} web.AnonymousStructArray
+func AnonymousStructArray() {
+}
+
 type Pet3 struct {
 	ID int `json:"id"`
+}
+
+// @Success 200 {object} web.Pet5a "ok"
+func GetPet5a() {
+
+}
+
+// @Success 200 {object} web.Pet5b "ok"
+func GetPet5b() {
+
+}
+
+// @Success 200 {object} web.Pet5c "ok"
+func GetPet5c() {
+
+}
+
+type SwagReturn []map[string]string
+
+// @Success 200 {object}  api.SwagReturn	"ok"
+func GetPet6MapString() {
+
 }

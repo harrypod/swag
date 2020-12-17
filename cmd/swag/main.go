@@ -1,12 +1,22 @@
 package main
 
 import (
+	"log"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/swaggo/swag"
 	"github.com/swaggo/swag/gen"
 	"github.com/urfave/cli"
 )
+
+const searchDirFlag = "dir"
+const generalInfoFlag = "generalInfo"
+const propertyStrategyFlag = "propertyStrategy"
+const outputFlag = "output"
+const parseVendorFlag = "parseVendor"
+const parseDependency = "parseDependency"
+const markdownFilesDirFlag = "markdownFiles"
 
 func main() {
 	app := cli.NewApp()
@@ -18,12 +28,29 @@ func main() {
 			Aliases: []string{"i"},
 			Usage:   "Create docs.go",
 			Action: func(c *cli.Context) error {
-				dir := c.String("dir")
-				mainAPIFile := c.String("generalInfo")
-				swaggerConfDir := c.String("swagger")
-				strategy := c.String("propertyStrategy")
-				gen.New().Build(dir, mainAPIFile, swaggerConfDir, strategy)
-				return nil
+				searchDir := c.String(searchDirFlag)
+				mainAPIFile := c.String(generalInfoFlag)
+				strategy := c.String(propertyStrategyFlag)
+				outputDir := c.String(outputFlag)
+				parseVendor := c.Bool(parseVendorFlag)
+				parseDependency := c.Bool(parseDependency)
+				markdownFilesDir := c.String(markdownFilesDirFlag)
+
+				switch strategy {
+				case swag.CamelCase, swag.SnakeCase, swag.PascalCase:
+				default:
+					return errors.Errorf("not supported %s propertyStrategy", strategy)
+				}
+
+				return gen.New().Build(&gen.Config{
+					SearchDir:          searchDir,
+					MainAPIFile:        mainAPIFile,
+					PropNamingStrategy: strategy,
+					OutputDir:          outputDir,
+					ParseVendor:        parseVendor,
+					ParseDependency:    parseDependency,
+					MarkdownFilesDir:   markdownFilesDir,
+				})
 			},
 			Flags: []cli.Flag{
 				cli.StringFlag{
@@ -37,17 +64,34 @@ func main() {
 					Usage: "Directory you want to parse",
 				},
 				cli.StringFlag{
-					Name:  "swagger, s",
-					Value: "./docs/swagger",
-					Usage: "Output the swagger conf for json and yaml",
+					Name:  "propertyStrategy, p",
+					Value: "camelcase",
+					Usage: "Property Naming Strategy like snakecase,camelcase,pascalcase",
 				},
 				cli.StringFlag{
-					Name:  "propertyStrategy, p",
+					Name:  "output, o",
+					Value: "./docs",
+					Usage: "Output directory for al the generated files(swagger.json, swagger.yaml and doc.go)",
+				},
+				cli.BoolFlag{
+					Name:  "parseVendor",
+					Usage: "Parse go files in 'vendor' folder, disabled by default",
+				},
+				cli.BoolFlag{
+					Name:  "parseDependency",
+					Usage: "Parse go files in outside dependency folder, disabled by default",
+				},
+				cli.StringFlag{
+					Name:  "markdownFiles, md",
 					Value: "",
-					Usage: "Property Naming Strategy like snakecase",
+					Usage: "Parse folder containing markdown files to use as description, disabled by default",
 				},
 			},
 		},
 	}
-	app.Run(os.Args)
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
